@@ -13,14 +13,6 @@ namespace ii_Yume.Models
         public string? Synopsis { get; set; }
         public List<NovelVolume>? Volumes { get; set; } = new();
         public bool IsFree { get; set; }
-        //public Image? NovelImage { get; set; } = new();
     }
 
-    public class NovelView
-    {
-        public int ID { get; set; }
-        public string? NovelName { get; set; }
-        public string? NovelLink { get; set; }
-        //public Image? Image { get; set; }
-    }
 }

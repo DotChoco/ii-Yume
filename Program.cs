@@ -3,6 +3,11 @@ using ii_Yume.Scrappers;
 using ii_Yume.Models;
 using ii_Yume.Systems;
 using System.Diagnostics;
+using ii_Yume.DataBase;
+using System.Collections.Generic;
+using Newtonsoft.Json;
+using System.Security.Policy;
+
 namespace ii_Yume
 {
     internal class Program
@@ -14,7 +19,7 @@ namespace ii_Yume
 
             //TestNovelScrapper();
             //TestChapterScrapper();
-            TestMainScrapper();
+            //TestMainScrapper();
             //TestSearchScrapper();
 
             Console.ReadKey();
@@ -22,28 +27,106 @@ namespace ii_Yume
 
         static async void TestNovelScrapper()
         {
+            NovelScrapper novelScrapper = new();
             //novelData = await NovelScrapper.GetNovels(@"
             //https://novelasligeras.net/index.php/producto/goblin-slayer-novela-ligera/");
-            //novelData = await NovelScrapper.GetNovels(@"
-            //https://novelasligeras.net/index.php/producto/sokushi-cheat-ga-saikyou-novela-ligera/");
-            //novelData = await NovelScrapper.GetNovels(@"
-            //https://novelasligeras.net/index.php/producto/saijaku-muhai-no-bahamut-novela-ligera/");
-            //novelData = await NovelScrapper.GetNovels(@"
-            //https://novelasligeras.net/index.php/producto/trpg-player-ga-isekai-de-saikyou-build-wo-mezasu-novela-ligera/");
-            //novelData = await NovelScrapper.GetNovels(@"
-            //https://novelasligeras.net/index.php/producto/watashi-nouryoku-TestNovelScrapper-heikinchi-dette-itta-yo-ne-novela-ligera/");
-            //novelData = await NovelScrapper.GetNovels(@"
-            //https://novelasligeras.net/index.php/producto/toradora-novela-ligera/");
-            //novelData = await NovelScrapper.GetNovels(@"
-            //https://novelasligeras.net/index.php/producto/shinmai-maou-no-keiyakusha-novela-ligera/");
-            //novelData = await NovelScrapper.GetNovels(@"
-            //https://novelasligeras.net/index.php/producto/shinja-zero-no-megami-sama-novela-ligera/");
-            //novelData = await NovelScrapper.GetNovels(@"
-            //https://novelasligeras.net/index.php/producto/atelier-tanaka-novela-ligera/");
-            novelData = await NovelScrapper.Init(@"
-            https://novelasligeras.net/index.php/producto/kage-no-jitsuryokusha-ni-naritakute-novela-ligera/");
+
+
+            List<Novel> novels = new();
+            StreamReader reader = new(@"D:\carlo\Download\yume\Novel-Links.txt");
+            var lines = reader.ReadToEnd().Split('\r');
+            string data = string.Empty;
+            reader.Close();
+            
+
+            for (int i = 0; i < lines.Length-1; i++)
+            {
+                data = lines[i];
+                var novel = await novelScrapper.Init(data);
+                //novel.Volumes = await GetParagraphs(novel);
+                if (i + 1 == lines.Length)
+                {
+                    novels.Add(novel);
+                    Console.WriteLine($"Fn {i}{lines[i]}");
+
+                    await jsonizer(novel);
+                    break;
+                }
+                Console.WriteLine($"Hola, {i},{lines[i]}");
+                novels.Add(novel);
+
+                await jsonizer(novel);
+                data = string.Empty;
+            }
+            Console.WriteLine("\n\nJsonizer Finished");
 
         }
+        static async Task<List<NovelVolume>> GetParagraphs(Novel data)
+        {
+            ChapterScrapper chapterScrapper = new();
+            
+            
+            List<NovelVolume> result = new();
+
+
+            foreach (var volume in data.Volumes)
+            {
+                NovelVolume volumeRes = new();
+                volumeRes.VolumNumber = volume.VolumNumber;
+                if ((volume != null || data.Volumes.Count != 0) && data.IsFree)
+                {
+                    foreach (var chapter in volume.Chapters)
+                    {
+                        Chapter chapterRes = new();
+                        chapterRes.ChapterName = chapter.ChapterName;
+                        chapterRes.ChapterLink = chapter.ChapterLink;
+
+                        chapterRes.Paragraphs = await chapterScrapper.Init(chapter.ChapterLink);
+                        volumeRes.Chapters.Add(chapterRes);
+                        
+                    }
+                }
+                result.Add(volumeRes);
+            }
+            return result;
+        }
+
+
+        static async Task jsonizer(Novel novel)
+        {
+            string novelName = novel.NovelLink.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries)[^1].Replace("-novela-web", "").Replace("-novela-ligera", ""); ;
+            string filePath = $@"D:\carlo\Download\yumme\{novelName}.json";
+
+            JsonSerializerSettings settings = new JsonSerializerSettings
+            {
+                Formatting = Formatting.Indented, // Para que el JSON tenga formato legible
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore // Ignorar referencias circulares
+            };
+
+            try
+            {
+                using (StreamWriter streamWriter = new StreamWriter(filePath))
+                using (JsonTextWriter jsonWriter = new JsonTextWriter(streamWriter))
+                {
+                    jsonWriter.Formatting = Formatting.Indented;
+                    JsonSerializer serializer = JsonSerializer.Create(settings);
+                    serializer.Serialize(jsonWriter, novel);
+                }
+                Console.WriteLine("JSON saved to file: " + filePath);
+            }
+            catch (OutOfMemoryException ex)
+            {
+                Console.WriteLine("OutOfMemoryException: " + ex.Message);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception: " + ex.Message);
+            }
+        }
+
+        
+
+
 
 
         static async void TestChapterScrapper()
@@ -54,8 +137,8 @@ namespace ii_Yume
             //https://novelasligeras.net/index.php/2021/09/30/watashin-nouryoku-volumen-1-capitulo-1-parte-1-novela-ligera/");
             //chapterData = await ChapterScrapper.GetNovels(@"
             //https://novelasligeras.net/index.php/2023/07/19/sokushi-cheat-volumen-1-capitulo-1-novela-ligera/");
-            chapterData = await ChapterScrapper.Init(@"
-            https://novelasligeras.net/index.php/2021/09/30/watashin-nouryoku-volumen-1-capitulo-1-parte-1-novela-ligera/");
+            //chapterData = await ChapterScrapper.Init(@"
+            //https://novelasligeras.net/index.php/2021/09/30/watashin-nouryoku-volumen-1-capitulo-1-parte-1-novela-ligera/");
             //chapterData = await ChapterScrapper.GetNovels(@"
             //https://novelasligeras.net/index.php/2018/03/19/goblin-slayer-volumen-1-prologo-novela-ligera/");
 
@@ -63,14 +146,8 @@ namespace ii_Yume
 
         static async void TestMainScrapper()
         {
-            await MainPage.GetNovels();
+            //var a = MainPage.GetNovels();
         }
-
-        static async void TestSearchScrapper()
-        {
-            SearchNovels.SearchByName("Goblin");
-        }
-
 
 
     }

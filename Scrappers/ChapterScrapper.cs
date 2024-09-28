@@ -5,32 +5,54 @@ using System.Text;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
 using System.Text.RegularExpressions;
+using System.Net.Http;
 
 namespace ii_Yume.Scrappers
 {
     public class ChapterScrapper
     {
-        public static List<string> Paragraphs = new();
-        public static async Task<List<string>> Init(string url)
+        public List<string> Paragraphs = new();
+        public async Task<List<string>> Init(string url)
         {
             // Crear HttpClientHandler para configurar las opciones del cliente
             var httpClientHandler = new HttpClientHandler();
+            httpClientHandler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
 
-            // Crear HttpClient y establecer el encabezado User-Agent
-            var httpClient = new HttpClient(httpClientHandler);
-            httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
+            using (HttpClient client = new HttpClient(httpClientHandler))
+            {
+                try
+                {
+                    client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
 
-            // Descargar el HTML
-            var html = await httpClient.GetStringAsync(url);
+                    string html = await client.GetStringAsync(url);
+                    
+                    // Cargar el HTML en HtmlAgilityPack
+                    var htmlDoc = new HtmlDocument();
+                    htmlDoc.LoadHtml(html);
 
-            // Cargar el HTML en HtmlAgilityPack
-            var htmlDoc = new HtmlDocument();
-            htmlDoc.LoadHtml(html);
+                    Paragraphs = GetParagraphs(htmlDoc);
+                }
+                catch (HttpRequestException e)
+                {
+                    Console.WriteLine($"Request error: {e.Message}");
+                }
+            }
 
-            return GetParagraphs(htmlDoc);
+            //// Crear HttpClient y establecer el encabezado User-Agent
+            //var httpClient = new HttpClient(httpClientHandler);
+            //httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
+
+            //// Descargar el HTML
+            //var html = await httpClient.GetStringAsync(url);
+
+            //// Cargar el HTML en HtmlAgilityPack
+            //var htmlDoc = new HtmlDocument();
+            //htmlDoc.LoadHtml(html);
+
+            return Paragraphs;
         }
 
-        static List<string> GetParagraphs(HtmlDocument htmlDoc)
+        List<string> GetParagraphs(HtmlDocument htmlDoc)
         {
             var paragraphNodes = htmlDoc.DocumentNode.SelectNodes("//p");
             string data = default;
@@ -74,14 +96,14 @@ namespace ii_Yume.Scrappers
                             .Replace("&#8221;", "\"");
 
                     Paragraphs.Add(dataNode);
-                    Console.WriteLine(dataNode);
+                    //Console.WriteLine(dataNode);
                 }
             }
 
             return Paragraphs;
         }
 
-        static bool RemoveToList(HtmlNode node, int index)
+        bool RemoveToList(HtmlNode node, int index)
         {
             if(index == 125)
                 Console.WriteLine();

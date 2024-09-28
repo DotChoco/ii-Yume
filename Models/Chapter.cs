@@ -10,7 +10,6 @@ namespace ii_Yume.Models
     {
         public string? ChapterName { get; set; }
         public string? ChapterLink { get; set; }
-        public bool? ChapterRead { get; set; } = false;
         public List<string>? Paragraphs { get; set; } = new();
     }
 }

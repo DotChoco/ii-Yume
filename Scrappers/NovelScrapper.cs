@@ -14,7 +14,7 @@ namespace ii_Yume.Scrappers
     {
 
         public static Novel NovelData = new();
-        public static async Task<Novel> Init(string url)
+        public async Task<Novel> Init(string url)
         {
             // Crear HttpClientHandler para configurar las opciones del cliente
             var httpClientHandler = new HttpClientHandler();
@@ -53,8 +53,8 @@ namespace ii_Yume.Scrappers
                 GetChapters(htmlDoc);
             }
 
-            // Mostrar la información
-            PrintData(NovelData);
+            //// Mostrar la información
+            //PrintData(NovelData);
 
             return NovelData;
         }
@@ -62,7 +62,7 @@ namespace ii_Yume.Scrappers
 
         #region GetData
 
-        static bool IsFree(HtmlDocument htmlDoc)
+        bool IsFree(HtmlDocument htmlDoc)
         {
             var freeNovel = htmlDoc.DocumentNode.SelectNodes("//span[@class='berocket_tooltip_text']");
             if (freeNovel != null)
@@ -83,15 +83,15 @@ namespace ii_Yume.Scrappers
             return NovelData.IsFree;
         }
 
-        static void SetLink(string url) => NovelData.NovelLink = url;
+        void SetLink(string url) => NovelData.NovelLink = url;
 
-        static void GetName(HtmlDocument htmlDoc)
+        void GetName(HtmlDocument htmlDoc)
         {
             var nameNode = htmlDoc.DocumentNode.SelectSingleNode("//h1[@class='product_title entry-title']");
             NovelScrapper.NovelData.NovelName = nameNode?.InnerText.Trim();
         }
 
-        static void GetSynopsis(HtmlDocument htmlDoc)
+        void GetSynopsis(HtmlDocument htmlDoc)
         {
             var synopsisNode = htmlDoc.DocumentNode.SelectSingleNode("//div[@class='woocommerce-product-details__short-description']");
             NovelData.Synopsis = synopsisNode?.InnerText.Trim()
@@ -114,13 +114,13 @@ namespace ii_Yume.Scrappers
             }
         }
 
-        static void GetGenders(HtmlDocument htmlDoc)
+        void GetGenders(HtmlDocument htmlDoc)
         {
             var synopsisNode = htmlDoc.DocumentNode.SelectSingleNode("//span[@class='posted_in']");
             NovelScrapper.NovelData.NovelGenders = synopsisNode?.InnerText.Trim().Remove(0, 12);
         }
         
-        static void GetStars(HtmlDocument htmlDoc)
+        void GetStars(HtmlDocument htmlDoc)
         {
             var synopsisNode = htmlDoc.DocumentNode.SelectSingleNode("//strong[@class='rating']");
             if (synopsisNode != null)
@@ -129,7 +129,7 @@ namespace ii_Yume.Scrappers
                 NovelScrapper.NovelData.Stars = 0;
         }
 
-        static void GetChapters(HtmlDocument htmlDoc)
+        void GetChapters(HtmlDocument htmlDoc)
         {
             List<string> chapters = new List<string>();
             List<string> chaptersLinks = new List<string>();
@@ -176,9 +176,12 @@ namespace ii_Yume.Scrappers
                     i = -1;
                 }
             }
-
+            
             foreach (var Volume in VolumeNodes)
             {
+                if (VolumeNodes == null || Volume == null)
+                    break;
+                
                 while (counter <= chapters.Count-1 && 
                     Volume.InnerText.Contains(chapters[counter]))
                 {
@@ -189,6 +192,8 @@ namespace ii_Yume.Scrappers
                     });
                     counter++;
                 }
+                if (counter == 0 || chapters.Count == 0)
+                    break;
                 if(counter >= chapters.Count)
                 {
                     if (counter > chapters.Count - 1)
@@ -223,7 +228,7 @@ namespace ii_Yume.Scrappers
         #endregion
 
 
-        static void AddChaptersToVolume(int volumeNum, List<Chapter> caps)
+        void AddChaptersToVolume(int volumeNum, List<Chapter> caps)
         {
             NovelData.Volumes.Add(new()
             {
@@ -232,7 +237,7 @@ namespace ii_Yume.Scrappers
             });
         }
 
-        static void PrintData(Novel novel)
+        void PrintData(Novel novel)
         {
             Console.WriteLine("Nombre: " + novel.NovelName);
             Console.WriteLine("\n");
